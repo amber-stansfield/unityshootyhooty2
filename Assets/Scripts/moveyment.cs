@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using Unity.Netcode;
-using Unity.Services.Authentication;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering.PostProcessing;
@@ -148,11 +147,11 @@ public class moveyment : NetworkBehaviour
         SpeedControl();
         if (grounded)
         {
-            rb.drag = groundDrag;
+            rb.linearDamping = groundDrag;
         }
         else
         {
-            rb.drag = 0;
+            rb.linearDamping = 0;
         }
     }
 
@@ -196,9 +195,9 @@ public class moveyment : NetworkBehaviour
         MovePlayer();
         
         rb.AddForce(gravityScale, ForceMode.Acceleration);
-        if (rb.velocity.magnitude > 0)
+        if (rb.linearVelocity.magnitude > 0)
         {
-            rb.AddForce(-rb.velocity.normalized * friction);
+            rb.AddForce(-rb.linearVelocity.normalized * friction);
         }
         
     }
@@ -310,12 +309,12 @@ public class moveyment : NetworkBehaviour
 
     private void SpeedControl()
     {
-        Vector3 flatVelocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        Vector3 flatVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
 
         if (flatVelocity.magnitude > moveSpeed)
         {
             Vector3 limitedVelocity = flatVelocity.normalized * moveSpeed;
-            rb.velocity = new Vector3(limitedVelocity.x, rb.velocity.y, limitedVelocity.z);
+            rb.linearVelocity = new Vector3(limitedVelocity.x, rb.linearVelocity.y, limitedVelocity.z);
         }
     }
     private void Jump()
@@ -334,7 +333,7 @@ public class moveyment : NetworkBehaviour
         {
             rb.AddForce(transform.up * jumpHeight, ForceMode.Impulse);
         }
-        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         
     }
 

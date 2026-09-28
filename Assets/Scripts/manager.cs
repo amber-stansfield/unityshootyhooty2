@@ -2,10 +2,6 @@ using System.Threading.Tasks;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport.Relay;
-using Unity.Services.Authentication;
-using Unity.Services.Core;
-using Unity.Services.Relay;
-using Unity.Services.Relay.Models;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -32,6 +28,10 @@ namespace HelloWorld
         [SerializeField] GameObject mainMenuHolder;
         [SerializeField] GameObject subMenuHolder;
 
+        [SerializeField] private TMP_InputField playerNameInput;
+        [SerializeField] private TMP_Text nameText;
+        [SerializeField] private TMP_Text testField;
+
         public bool raceInProgress;
         public GameObject raceStartDude;
         public GameObject raceEndDude;
@@ -48,9 +48,9 @@ namespace HelloWorld
         private async void Start()
         {
             DontDestroyOnLoad(this);
-            await UnityServices.InitializeAsync();
+            //await UnityServices.InitializeAsync();
 
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            //await AuthenticationService.Instance.SignInAnonymouslyAsync();
         }
 
         private void Update()
@@ -61,61 +61,59 @@ namespace HelloWorld
             }
         }
 
-        public async void JoinRelay()
+        public void JoinGame()
         {
-            if (usernameInput.text == null || usernameInput.text.Length < 3 || usernameInput.text.Length > 10)
-            {
-                return;
-            }
-            await StartClientWIthRelay(dudeTextField.text);
+            //if (usernameInput.text == null || usernameInput.text.Length < 3 || usernameInput.text.Length > 10)
+            //{
+            //    return;
+            //}
+            NetworkManager.Singleton.StartClient();
             mainMenuHolder.SetActive(false);
             subMenuHolder.SetActive(true);
-            
-            //AddToUserListServerRpc();
+
         }
 
 
-        public async void StartRelay()
+        public async void HostGame()
         {
             if (usernameInput.text == null || usernameInput.text.Length < 3 || usernameInput.text.Length > 10)
             {
                 return;
             }
-            string joinCode = await StartHostWithRelay();
-            textMoment.text = joinCode;
+            NetworkManager.Singleton.StartHost();
             mainMenuHolder.SetActive(false);
             startButton.SetActive(true);
             subMenuHolder.SetActive(true);
         }
 
-        private async Task<string> StartHostWithRelay(int maxConnections = 3)
-        {
-            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
-            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, "dtls"));
-            string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
-            await AuthenticationService.Instance.UpdatePlayerNameAsync(usernameInput.text);
-            string gamers = AuthenticationService.Instance.PlayerName.Substring(0, AuthenticationService.Instance.PlayerName.Length - 5);
-            StartCoroutine(callTheDude(gamers));
+        //private async Task<string> StartHostWithRelay(int maxConnections = 3)
+        //{
+        //    Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
+        //    NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, "dtls"));
+        //    string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+        //    await AuthenticationService.Instance.UpdatePlayerNameAsync(usernameInput.text);
+        //    string gamers = AuthenticationService.Instance.PlayerName.Substring(0, AuthenticationService.Instance.PlayerName.Length - 5);
+        //    StartCoroutine(callTheDude(gamers));
 
-            return NetworkManager.Singleton.StartHost() ? joinCode : null;
-        }
+        //    return NetworkManager.Singleton.StartHost() ? joinCode : null;
+        //}
 
 
-        private async Task<bool> StartClientWIthRelay(string joinCode)
-        {
-            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
-            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(joinAllocation, "dtls"));
-            mainMenuHolder.SetActive(false);
-            subMenuHolder.SetActive(true);
-            await AuthenticationService.Instance.UpdatePlayerNameAsync(usernameInput.text);
-            FixedString32Bytes gamers = (FixedString32Bytes)AuthenticationService.Instance.PlayerName.Substring(0, AuthenticationService.Instance.PlayerName.Length - 5);
-            StartCoroutine(callTheDude(gamers));
-            //askforConnectedClientsServerRpc(name);
-            //AddPlayerToReg((ulong)NetworkManager.ConnectedClients.Count + 3, gamers);
+        //private async Task<bool> StartClientWIthRelay(string joinCode)
+        //{
+        //    JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+        //    NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(joinAllocation, "dtls"));
+        //    mainMenuHolder.SetActive(false);
+        //    subMenuHolder.SetActive(true);
+        //    await AuthenticationService.Instance.UpdatePlayerNameAsync(usernameInput.text);
+        //    FixedString32Bytes gamers = (FixedString32Bytes)AuthenticationService.Instance.PlayerName.Substring(0, AuthenticationService.Instance.PlayerName.Length - 5);
+        //    StartCoroutine(callTheDude(gamers));
+        //    //askforConnectedClientsServerRpc(name);
+        //    //AddPlayerToReg((ulong)NetworkManager.ConnectedClients.Count + 3, gamers);
 
-            return !string.IsNullOrEmpty(joinCode) && NetworkManager.Singleton.StartClient();
+        //    return !string.IsNullOrEmpty(joinCode) && NetworkManager.Singleton.StartClient();
 
-        }
+        //}
         void AddPlayerToReg(ulong playerIndex, FixedString32Bytes playerName)
         {
             names[(int)playerIndex] = playerName;
@@ -171,7 +169,25 @@ namespace HelloWorld
 
         }
 
+        public string GetPlayerName()
+        {
 
+            return playerNameInput.text;
+        }
+
+
+        [Rpc(SendTo.ClientsAndHost,InvokePermission = RpcInvokePermission.Everyone)]
+        public void distributeNameServerRpc(string text)
+        {
+            nameText.text = text;
+            
+        }
+
+        public void sendName()
+        {
+            nameText.text = GetPlayerName();
+            distributeNameServerRpc(nameText.text);
+        }
 
         [ServerRpc(RequireOwnership = false)]
         public void BeginRaceServerRpc()
@@ -276,10 +292,10 @@ namespace HelloWorld
         {
             SceneManager.LoadScene("Lab 1");
         }
-        private void StartButtons()
-        {
-            if (GUILayout.Button("Host")) StartRelay();
-        }
+        //private void StartButtons()
+        //{
+        //    if (GUILayout.Button("Host")) StartRelay();
+        //}
 
         //private IEnumerator loadDudes()
         //{

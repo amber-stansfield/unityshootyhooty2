@@ -91,7 +91,8 @@ namespace HelloWorld
         private async Task<string> StartHostWithRelay(int maxConnections = 3)
         {
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
-            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, "dtls"));
+            var relayServerData = allocation.ToRelayServerData("udp");
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
             await AuthenticationService.Instance.UpdatePlayerNameAsync(usernameInput.text);
             string gamers = AuthenticationService.Instance.PlayerName.Substring(0, AuthenticationService.Instance.PlayerName.Length - 5);
@@ -104,7 +105,8 @@ namespace HelloWorld
         private async Task<bool> StartClientWIthRelay(string joinCode)
         {
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
-            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(joinAllocation, "dtls"));
+            var relayServerData = joinAllocation.ToRelayServerData("udp");
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData((relayServerData));
             mainMenuHolder.SetActive(false);
             subMenuHolder.SetActive(true);
             await AuthenticationService.Instance.UpdatePlayerNameAsync(usernameInput.text);

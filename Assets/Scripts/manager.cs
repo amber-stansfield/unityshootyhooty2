@@ -205,12 +205,12 @@ namespace HelloWorld
 
 
 
-        public void gamerPre()
+        public void callStartGame()
         {
-            StartCoroutine(gamer());
+            StartCoroutine(startGame());
         }
 
-        private IEnumerator gamer()
+        private IEnumerator startGame()
         {
             loadingSceneClientRpc();
             yield return new WaitForSeconds(0.01f);
